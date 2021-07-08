@@ -22,6 +22,9 @@ The dataset is grouped and average values are calculated for each Subject/Activi
 The dataset includes the following files:
 
 -'README.md'
+
 -CODEBOOK
+
 -final_df.txt : final table calculating average values for every variable for every subject/activity grouping
+
 -run_analysis.R: script run to create analysis and final files
