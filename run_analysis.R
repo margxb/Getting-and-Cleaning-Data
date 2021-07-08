@@ -1,64 +1,44 @@
-acc_x_test <- read.table("body_acc_x_test.txt")
-acc_y_test <- read.table("body_acc_y_test.txt")
-acc_z_test <- read.table("body_acc_z_test.txt")
-acc_x_train <- read.table("body_acc_x_train.txt")
-acc_y_train <- read.table("body_acc_y_train.txt")
-acc_z_train <- read.table("body_acc_z_train.txt")
-gyro_x_test <- read.table("body_gyro_x_test.txt")
-gyro_y_test <- read.table("body_gyro_y_test.txt")
-gyro_z_test <- read.table("body_gyro_z_test.txt")
-gyro_x_train <- read.table("body_gyro_x_train.txt")
-gyro_y_train <- read.table("body_gyro_y_train.txt")
-gyro_z_train <- read.table("body_gyro_z_train.txt")
-total_acc_x_test <- read.table("total_acc_x_test.txt")
-total_acc_y_test <- read.table("total_acc_y_test.txt")
-total_acc_z_test <- read.table("total_acc_z_test.txt")
-total_acc_x_train <- read.table("total_acc_x_train.txt")
-total_acc_y_train <- read.table("total_acc_y_train.txt")
-total_acc_z_train <- read.table("total_acc_z_train.txt")
+#Starts dplyr package
+library(dplyr)
 
-acc_x <- rbind(acc_x_test, acc_x_train)
-acc_y <- rbind(acc_y_test, acc_y_train)
-acc_z <- rbind(acc_z_test, acc_z_train)
-gyro_x <- rbind(gyro_x_test, gyro_y_train)
-gyro_y <- rbind(gyro_y_test, gyro_y_train)
-gyro_z <- rbind(gyro_z_test, gyro_z_train)
-total_acc_x <- rbind(total_acc_x_test, total_acc_x_train)
-total_acc_y <- rbind(total_acc_y_test, total_acc_y_train)
-total_acc_z <- rbind(total_acc_z_test, total_acc_z_train)
+## Reads in the different train/test datasets
+x_train <- read.table("X_train.txt")
+x_test <- read.table("X_test.txt")
+y_train <- read.table("y_train.txt")
+y_test <- read.table("y_test.txt")
+subject_train <- read.table("subject_train.txt")
+subject_test <- read.table("subject_test.txt")
 
+##Combines the train/text dataset for each set of files
+x_all <- rbind(x_train, x_test)
+y_all <- rbind(y_train, y_test)
+subject_all <- rbind(subject_train, subject_test)
 
-acc_x_df <- data.frame(acc_x)
-acc_x_df['Walking_Avg'] <- apply(acc_x, 1, mean)
-final_df <- acc_x_df['Walking_Avg']
-final_df['Walking_Std'] <- apply(acc_x, 1, sd)
-final_df['Walking_Upstairs_Avg'] <- apply(acc_y, 1, mean)
-final_df['Walking_Upstairs_Std'] <- apply(acc_y, 1, sd)
-final_df['Walking_Downstairs_Avg'] <- apply(acc_z, 1, mean)
-final_df['Walking_Downstairs_Std'] <- apply(acc_z, 1, sd)
-final_df['Sitting_Avg'] <- apply(gyro_x, 1, mean)
-final_df['Sitting_Std'] <- apply(gyro_x, 1, sd)
-final_df['Standing_Avg'] <- apply(gyro_y, 1, mean)
-final_df['Standing_Std'] <- apply(gyro_y, 1, sd)
-final_df['Laying_Avg'] <- apply(gyro_z, 1, mean)
-final_df['Laying_Std'] <- apply(gyro_z, 1, sd)
-final_df['Total_X_Avg'] <- apply(total_acc_x, 1, mean)
-final_df['Total_X_Std'] <- apply(total_acc_x, 1, sd)
-final_df['Total_Y_Avg'] <- apply(total_acc_y, 1, mean)
-final_df['Total_Y_Std'] <- apply(total_acc_y, 1, sd)
-final_df['Total_Z_Avg'] <- apply(total_acc_z, 1, mean)
-final_df['Total_Z_Std'] <- apply(total_acc_z, 1, sd)
+##reads in features to be used for column names
+features <- read.table("features.txt")
 
+##reads in activity names to merge in with data
+activity <- read.table("activity_labels.txt")
 
-summary_df <- final_df['Walking_Avg']
-summary_df <- sapply(summary_df, mean)
-summary_df['Walking_Upstairs_Avg'] <- sapply(final_df['Walking_Upstairs_Avg'], mean)
-summary_df['Walking_Downstairs_Avg'] <- sapply(final_df['Walking_Downstairs_Avg'], mean)
-summary_df['Sitting_Avg'] <- sapply(final_df['Sitting_Avg'], mean)
-summary_df['Standing_Avg'] <- sapply(final_df['Standing_Avg'], mean)
-summary_df['Laying_Avg'] <- sapply(final_df['Laying_Avg'], mean)
-summary_df['Total_X_Avg'] <- sapply(final_df['Total_X_Avg'], mean)
-summary_df['Total_Y_Avg'] <- sapply(final_df['Total_Y_Avg'], mean)
-summary_df['Total_Z_Avg'] <- sapply(final_df['Total_Z_Avg'], mean)
+##Names columns of datasets
+colnames(subject_all) <- "Subject_ID"
+colnames(y_all) <- "Activity_ID"
+colnames(x_all) <- features[,2]
+colnames(activity) <- c("Activity_ID", "Activity_Name")
 
-write.table(summary_df, file = "final_table.txt", row.names = FALSE)
+##merge activity name with number
+y_all <- merge(y_all, activity, by = "Activity_ID")
+
+##Combine all datasets into single dataset
+combine_df <- cbind(subject_all, y_all, x_all )
+
+##Select only mean and standard deviation values for each variable
+select_mean_std <- select(combine_df, Subject_ID, Activity_ID, Activity_Name, contains("std"), contains("mean"))
+
+##Group by subject/Activity to calculate mean for each variable for each Subject/Activity group.
+avg_select_mean_std <- select_mean_std %>%
+  group_by(Subject_ID, Activity_ID, Activity_Name) %>%
+  summarize_all(mean)
+
+##Write to table for final submission
+write.table(avg_select_mean_std, "final_df.txt", row.name = FALSE)
